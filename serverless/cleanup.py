@@ -1,5 +1,5 @@
 import boto3
-from botocore import exceptions as botofail
+from botocore import exceptions as boto_fail
 
 
 def run(event, context):
@@ -48,7 +48,7 @@ def run(event, context):
                 ],
             )
 
-        except botofail.WaiterError as e:
+        except boto_fail.WaiterError as e:
             return "Error: {}\nVolume with ID: {} did not detach from {} in time.  Clean up: \nSnap {}, {}\nVolume {}".\
                 format(e,
                        original_volume_id,

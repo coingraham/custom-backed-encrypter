@@ -1,5 +1,5 @@
 import boto3
-from botocore import exceptions as botofail
+from botocore import exceptions as boto_fail
 
 
 def run(event, context):
@@ -25,7 +25,7 @@ def run(event, context):
 
             return "Complete"
 
-        except botofail.WaiterError:
+        except boto_fail.WaiterError:
 
             return "Running"
 
