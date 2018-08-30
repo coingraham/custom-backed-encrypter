@@ -4,7 +4,7 @@ service: custom-backed-encrypter # NOTE: update this with your service name
 provider:
   name: aws
   runtime: python2.7
-  profile: firstwatch
+  profile: profile_name # put your profile here
   memorySize: 128
   region: us-east-1
   timeout: 300
