@@ -21,6 +21,7 @@ Resources:
       ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-startstepfunctionencrypter
       instance_id : !Ref MyServer
       step_function_arn: !Ref MyStateMachine
+      region: !Ref AWS::Region
 
   MyStateMachine:
     Type: AWS::StepFunctions::StateMachine
