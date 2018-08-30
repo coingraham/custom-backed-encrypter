@@ -4,17 +4,11 @@ import json
 
 class StepFunctionStarter:
     
-    def __init__(self, instance_id, step_function_arn, profile=None):
+    def __init__(self, instance_id, step_function_arn, region):
         self.instance_id = instance_id
         self.step_function_arn = step_function_arn
-        self.region = "us-east-1"
-
-        if profile:
-            self.profile = profile
-            self.session = boto3.session.Session(region_name=self.region, profile_name=profile)
-        else:
-            self.profile = ""
-            self.session = boto3.session.Session(region_name=self.region)
+        self.region = region
+        self.session = boto3.session.Session(region_name=self.region)
 
     def start(self):
 
@@ -23,6 +17,7 @@ class StepFunctionStarter:
         try:
             input_data = {
                 "instance_id": self.instance_id,
+                "region": self.region
             }
 
             sfn_response = sfn_client.start_execution(

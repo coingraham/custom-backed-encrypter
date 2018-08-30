@@ -9,6 +9,7 @@ def run(event, context):
 
     event_instance_id = event["ResourceProperties"]["instance_id"]
     event_step_function_arn = event["ResourceProperties"]["step_function_arn"]
+    event_region = event["ResourceProperties"]["region"]
     request_type = event["RequestType"]
 
     response_status = "SUCCESS"
@@ -17,7 +18,7 @@ def run(event, context):
         return send_response(event, context, response_status, response_data)
 
     try:
-        step_function_encrypter = StepFunctionStarter(event_instance_id, event_step_function_arn)
+        step_function_encrypter = StepFunctionStarter(event_instance_id, event_step_function_arn, event_region)
 
         step_function_encrypter.start()
 
