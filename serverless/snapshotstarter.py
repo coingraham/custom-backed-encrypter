@@ -1,34 +1,18 @@
 import boto3
-import botocore
-import json
+from botocore import exceptions as botofail
 
 
 class SnapshotStarter:
     
-    def __init__(self, instance_id, profile=None):
+    def __init__(self, instance_id, region):
         self.instance_id = instance_id
-        self.region = "us-east-1"
-        self.instance_name = "Test"
+        self.region = region
         self.instance = None
         self.instance_volume_mappings = []
-
-        # if aws_encryption_key_arn:
-        #     self.aws_encryption_key_arn = aws_encryption_key_arn
-        # else:
-        #     self.aws_encryption_key_arn = ""
-
-        if profile:
-            self.profile = profile
-            self.session = boto3.session.Session(region_name=self.region, profile_name=profile)
-            self.ec2_client = self.session.client("ec2")
-            self.ec2_resource = self.session.resource("ec2")
-            self.waiter_instance_stopped = self.ec2_client.get_waiter("instance_stopped")
-        else:
-            self.profile = ""
-            self.session = boto3.session.Session(region_name=self.region)
-            self.ec2_client = self.session.client("ec2")
-            self.ec2_resource = self.session.resource("ec2")
-            self.waiter_instance_stopped = self.ec2_client.get_waiter("instance_stopped")
+        self.session = boto3.session.Session(region_name=self.region)
+        self.ec2_client = self.session.client("ec2")
+        self.ec2_resource = self.session.resource("ec2")
+        self.waiter_instance_stopped = self.ec2_client.get_waiter("instance_stopped")
 
     def start(self):
 
@@ -74,7 +58,7 @@ class SnapshotStarter:
 
         snapshot = self.ec2_resource.create_snapshot(
             VolumeId=volume.id,
-            Description="Snapshot of volume ({}) for {}".format(volume.id, self.instance_name),
+            Description="Snapshot of volume ({}) for {}".format(volume.id, self.instance_id),
         )
 
         return snapshot.id
@@ -85,7 +69,7 @@ class SnapshotStarter:
         if self.instance.state["Code"] in instance_exit_states:
             raise Exception("ERROR: Instance is {} please make sure this instance ({}) is active.".format(
                 self.instance.state["Name"],
-                self.instance_name
+                self.instance_id
             ))
 
         # Validate successful shutdown if it is running or stopping
@@ -101,5 +85,5 @@ class SnapshotStarter:
                     self.instance.id,
                 ]
             )
-        except botocore.exceptions.WaiterError as e:
-            raise Exception("ERROR: {} on {}".format(e, self.instance_name))
+        except botofail.WaiterError as e:
+            raise Exception("ERROR: {} on {}".format(e, self.instance_id))

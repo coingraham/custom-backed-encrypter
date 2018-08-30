@@ -4,7 +4,7 @@ from botocore import exceptions as botofail
 
 def run(event, context):
 
-    region = "us-east-1"
+    region = event["region"]
     instance_id = event["instance_id"]
     device_name = event["volume_details"]["DeviceName"]
     encrypted_volume_id = event["encrypted_volume_id"]

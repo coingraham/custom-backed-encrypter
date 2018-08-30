@@ -3,7 +3,7 @@ import boto3
 
 def run(event, context):
 
-    region = "us-east-1"
+    region = event["region"]
 
     encrypted_snap_id = event['encrypted_snap_id']
     availability_zone = event["volume_details"]["Volume_AZ"]
