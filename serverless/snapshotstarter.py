@@ -1,5 +1,5 @@
 import boto3
-from botocore import exceptions as botofail
+from botocore import exceptions as boto_fail
 
 
 class SnapshotStarter:
@@ -77,7 +77,7 @@ class SnapshotStarter:
             self.instance.stop()
 
         # Set the max_attempts for this waiter (default 40)
-        self.waiter_instance_stopped.config.max_attempts = 40
+        self.waiter_instance_stopped.config.max_attempts = 19
 
         try:
             self.waiter_instance_stopped.wait(
@@ -85,5 +85,5 @@ class SnapshotStarter:
                     self.instance.id,
                 ]
             )
-        except botofail.WaiterError as e:
+        except boto_fail.WaiterError as e:
             raise Exception("ERROR: {} on {}".format(e, self.instance_id))
