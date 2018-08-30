@@ -4,12 +4,9 @@ import boto3
 def run(event, context):
 
     region = event["region"]
-
     encrypted_snap_id = event['encrypted_snap_id']
     availability_zone = event["volume_details"]["Volume_AZ"]
     volume_type = event["volume_details"]["Volume_Type"]
-
-    print encrypted_snap_id
 
     try:
         session = boto3.session.Session(region_name=region)
