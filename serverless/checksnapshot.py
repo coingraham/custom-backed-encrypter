@@ -7,11 +7,9 @@ def run(event, context):
     region = event["region"]
 
     if "encrypted_snap_id" in event:
-        snapshot_id = event['encrypted_snap_id']
+        event_snapshot_id = event['encrypted_snap_id']
     else:
-        snapshot_id = event["volume_details"]["Snapshot_Id"]
-
-    print snapshot_id
+        event_snapshot_id = event["volume_details"]["Snapshot_Id"]
 
     try:
         session = boto3.session.Session(region_name=region)
@@ -24,7 +22,7 @@ def run(event, context):
         try:
             waiter_snapshot_complete.wait(
                 SnapshotIds=[
-                    snapshot_id,
+                    event_snapshot_id,
                 ]
             )
 
