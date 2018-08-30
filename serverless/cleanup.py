@@ -24,7 +24,7 @@ def run(event, context):
         # Set the max_attempts for this waiter (default 40)
         waiter_volume_available.config.max_attempts = 2
 
-        # Get the various objecte
+        # Get the various objects
         volume_encrypted = ec2_resource.Volume(encrypted_volume_id)
         instance = ec2_resource.Instance(instance_id)
 
@@ -47,8 +47,15 @@ def run(event, context):
                     original_volume_id,
                 ],
             )
+
         except botofail.WaiterError as e:
-            return "ERROR: {} on {}".format(e, instance_id)
+            return "Error: {}\nVolume with ID: {} did not detach from {} in time.  Clean up: \nSnap {}, {}\nVolume {}".\
+                format(e,
+                       original_volume_id,
+                       instance_id,
+                       original_snapshot_id,
+                       encrypted_snapshot_id,
+                       encrypted_volume_id)
 
         instance.attach_volume(
             VolumeId=encrypted_volume_id,
@@ -68,9 +75,9 @@ def run(event, context):
         )
 
         # Delete snapshots and original volume
-        remove_original_snapshot = ec2_resource.Snapshot(original_snapshot_id).delete()
-        remove_encrypted_snapshot = ec2_resource.Snapshot(encrypted_snapshot_id).delete()
-        remove_original_volume = ec2_resource.Volume(original_volume_id).delete()
+        ec2_resource.Snapshot(original_snapshot_id).delete()
+        ec2_resource.Snapshot(encrypted_snapshot_id).delete()
+        ec2_resource.Volume(original_volume_id).delete()
 
         # Start the instance
         instance.start()
