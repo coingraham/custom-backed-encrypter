@@ -1,0 +1,161 @@
+---
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "CFT to showcase custom backed encrypter."
+
+Resources:
+
+  MyServer:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-0b7b74ba8473ec232
+      InstanceType: t2.nano
+      SubnetId: subnet-71665306
+      Tags:
+        - Key: Name
+          Value: CBE Test
+
+  MyEncrypter:
+   Type: Custom::Encrypter
+   Version : 1.0
+   Properties :
+      ServiceToken: !Sub arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-startstepfunctionencrypter
+      instance_id : !Ref MyServer
+      step_function_arn: !Ref MyStateMachine
+
+  MyStateMachine:
+    Type: AWS::StepFunctions::StateMachine
+    Properties:
+      StateMachineName: cbe-state-machine
+      DefinitionString: !Sub |-
+        {
+          "Comment": "Custom Resource Encrypter State Machine.",
+          "StartAt": "StartSnapshotTask",
+          "States": {
+            "StartSnapshotTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-startsnapshot",
+              "ResultPath": "$.volume_details",
+              "Next": "CheckSnapshotTask"
+            },
+            "CheckSnapshotTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-checksnapshot",
+              "ResultPath": "$.snap_success",
+              "Retry": [ {
+                "ErrorEquals": ["States.TaskFailed"],
+                "IntervalSeconds": 5,
+                "MaxAttempts": 3
+              } ],
+              "Next": "isSnapComplete"
+            },
+            "isSnapComplete": {
+              "Type" : "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.snap_success",
+                  "StringEquals": "Complete",
+                  "Next": "StartCopyTask"
+                }
+              ],
+              "Default": "PauseforCheck"
+            },
+            "PauseforCheck": {
+              "Type": "Wait",
+              "Seconds": 30,
+              "Next": "CheckSnapshotTask"
+            },
+            "StartCopyTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-startcopy",
+              "ResultPath": "$.encrypted_snap_id",
+              "Next": "CheckEncryptedSnapshotTask"
+            },
+            "CheckEncryptedSnapshotTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-checksnapshot",
+              "ResultPath": "$.snap_success",
+              "Retry": [ {
+                "ErrorEquals": ["States.TaskFailed"],
+                "IntervalSeconds": 5,
+                "MaxAttempts": 3
+              } ],
+              "Next": "isEncryptedSnapComplete"
+            },
+            "isEncryptedSnapComplete": {
+              "Type" : "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.snap_success",
+                  "StringEquals": "Complete",
+                  "Next": "CreateVolumeTask"
+                }
+              ],
+              "Default": "PauseforEncryptedCheck"
+            },
+            "PauseforEncryptedCheck": {
+              "Type": "Wait",
+              "Seconds": 30,
+              "Next": "CheckEncryptedSnapshotTask"
+            },
+            "CreateVolumeTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-createvolume",
+              "ResultPath": "$.encrypted_volume_id",
+              "Next": "CheckVolumeTask"
+            },
+            "CheckVolumeTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-checkvolume",
+              "ResultPath": "$.volume_success",
+              "Retry": [ {
+                "ErrorEquals": ["States.TaskFailed"],
+                "IntervalSeconds": 5,
+                "MaxAttempts": 3
+              } ],
+              "Next": "isVolumeReady"
+            },
+            "isVolumeReady": {
+              "Type" : "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.volume_success",
+                  "StringEquals": "Complete",
+                  "Next": "CleanupTask"
+                }
+              ],
+              "Default": "PauseforVolumeCheck"
+            },
+            "PauseforVolumeCheck": {
+              "Type": "Wait",
+              "Seconds": 30,
+              "Next": "CheckVolumeTask"
+            },
+            "CleanupTask": {
+              "Type": "Task",
+              "Resource": "arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function:custom-backed-encrypter-dev-cleanup",
+              "ResultPath": "$.cleanup_success",
+              "Next": "isCleanupComplete"
+            },
+            "isCleanupComplete": {
+              "Type" : "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.cleanup_success",
+                  "StringEquals": "Complete",
+                  "Next": "Finished"
+                }
+              ],
+              "Default": "CleanupFailed"
+            },
+            "CleanupFailed": {
+              "Type": "Fail",
+              "Cause": "Cleanup Failed.  Check CloudWatch Logs for more information."
+            },
+            "Finished": {
+              "Type": "Succeed"
+            }
+          }
+        }
+      RoleArn: !Sub arn:aws:iam::${AWS::AccountId}:role/service-role/StatesExecutionRole
+
+
